@@ -36,7 +36,7 @@ const AddressClass = {
 	PowerDivider: 0x5b,
 	OnOffController: 0x60,
 	WiFiKit: 0x62,
-  MIM: 0x63,
+	MIM: 0x63,
 	CentralController: 0x65,
 	DMS: 0x6a,
 	JIGTester: 0x80,
