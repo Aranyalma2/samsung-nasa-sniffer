@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Samsung NASA Protocol Sniffer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="header">
+    <div class="header-left">
+      <div class="title">Samsung NASA Protocol Sniffer</div>
+      <div class="status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting...</span>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-label">Total:</span>
+        <span class="stat-value" id="totalPackets">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Filtered:</span>
+        <span class="stat-value" id="filteredPackets">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Rate:</span>
+        <span class="stat-value" id="packetsPerSecond">0</span>
+        <span class="stat-label">/s</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="filter-group">
+      <label>Src:</label>
+      <input type="text" id="filterSource" placeholder="20.00.00">
+    </div>
+    <div class="filter-group">
+      <label>Dst:</label>
+      <input type="text" id="filterDestination" placeholder="50.00.00">
+    </div>
+    <div class="filter-group">
+      <label>Type:</label>
+      <select id="filterDataType">
+        <option value="">All</option>
+        <option value="Read">Read</option>
+        <option value="Write">Write</option>
+        <option value="Request">Request</option>
+        <option value="Response">Response</option>
+        <option value="Notification">Notify</option>
+        <option value="Ack">Ack</option>
+        <option value="Nack">Nack</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Msg:</label>
+      <input type="text" id="filterMessageName" placeholder="name or 0x4000">
+    </div>
+    <div class="filter-group">
+      <label>Raw:</label>
+      <input type="text" id="filterRawValue" placeholder="32 20">
+    </div>
+    <button class="btn" id="clearFilters">Clear</button>
+    <button class="btn btn-pause" id="pauseBtn">⏸ Pause</button>
+    <button class="btn" id="clearPackets">Clear All</button>
+    <button class="btn btn-primary" id="toggleDetails">Details ▶</button>
+  </div>
+
+  <div class="main-content">
+    <div class="packet-list" id="packetList">
+      <div class="empty-state">
+        <div class="empty-icon">📡</div>
+        <div>Waiting for packets...</div>
+      </div>
+    </div>
+
+    <div class="details-panel" id="detailsPanel">
+      <div class="details-header">
+        <div class="details-title">Packet Details</div>
+        <button class="close-btn" id="closeDetails">✕</button>
+      </div>
+      <div class="details-content" id="detailsContent">
+        <div class="empty-state">
+          <div>Select a packet to view details</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
