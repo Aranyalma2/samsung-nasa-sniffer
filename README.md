@@ -1,4 +1,4 @@
-# NASA Protocol Sniffer - with GUI Mode
+# Samsung NASA Protocol Packet Sniffer - with GUI Mode
 
 ## Usage
 
