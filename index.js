@@ -66,7 +66,7 @@ const AddressClassName = {
 	0x5b: "PowerDivider",
 	0x60: "OnOffController",
 	0x62: "WiFiKit",
-  0x63: "MIM",
+	0x63: "MIM",
 	0x65: "CentralController",
 	0x6a: "DMS",
 	0x80: "JIGTester",
