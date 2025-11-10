@@ -3,9 +3,6 @@ let ws = null;
 let packets = [];
 let filteredPackets = [];
 let isConnected = false;
-let packetRate = 0;
-let lastPacketTime = Date.now();
-let packetCountLastSecond = 0;
 let isPaused = false;
 let selectedPacketTimestamp = null; // Track by timestamp instead of index
 
@@ -14,7 +11,6 @@ const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const totalPacketsEl = document.getElementById('totalPackets');
 const filteredPacketsEl = document.getElementById('filteredPackets');
-const packetsPerSecondEl = document.getElementById('packetsPerSecond');
 const packetListEl = document.getElementById('packetList');
 const detailsPanel = document.getElementById('detailsPanel');
 const detailsContent = document.getElementById('detailsContent');
@@ -24,6 +20,7 @@ const filterSource = document.getElementById('filterSource');
 const filterDestination = document.getElementById('filterDestination');
 const filterDataType = document.getElementById('filterDataType');
 const filterMessageName = document.getElementById('filterMessageName');
+const filterMessageValue = document.getElementById('filterMessageValue');
 const filterRawValue = document.getElementById('filterRawValue');
 const clearFiltersBtn = document.getElementById('clearFilters');
 const clearPacketsBtn = document.getElementById('clearPackets');
@@ -70,17 +67,6 @@ function connect() {
             // Add new packet (backend always logs, even when UI is paused)
             packets.push(message.data);
             
-            // Update packet rate
-            const now = Date.now();
-            if (now - lastPacketTime < 1000) {
-                packetCountLastSecond++;
-            } else {
-                packetRate = packetCountLastSecond;
-                packetCountLastSecond = 1;
-                lastPacketTime = now;
-                packetsPerSecondEl.textContent = packetRate;
-            }
-            
             // Only update UI if not paused
             if (!isPaused) {
                 applyFilters();
@@ -95,6 +81,7 @@ function applyFilters() {
     const destFilter = filterDestination.value.toLowerCase().trim();
     const dataTypeFilter = filterDataType.value;
     const msgNameFilter = filterMessageName.value.toLowerCase().trim();
+    const msgValueFilter = filterMessageValue.value.toLowerCase().trim();
     const rawValueFilter = filterRawValue.value.toLowerCase().trim();
     
     filteredPackets = packets.filter(packet => {
@@ -123,6 +110,18 @@ function applyFilters() {
                 return nameMatch || hexMatch;
             });
             if (!hasMatchingMessage) {
+                return false;
+            }
+        }
+        
+        // Message value filter
+        if (msgValueFilter) {
+            const hasMatchingValue = packet.messages.some(msg => {
+                const readableValueMatch = msg.readableValue.toLowerCase().includes(msgValueFilter);
+                const rawValueMatch = msg.value.toString().toLowerCase().includes(msgValueFilter);
+                return readableValueMatch || rawValueMatch;
+            });
+            if (!hasMatchingValue) {
                 return false;
             }
         }
@@ -270,6 +269,7 @@ filterSource.addEventListener('input', applyFilters);
 filterDestination.addEventListener('input', applyFilters);
 filterDataType.addEventListener('change', applyFilters);
 filterMessageName.addEventListener('input', applyFilters);
+filterMessageValue.addEventListener('input', applyFilters);
 filterRawValue.addEventListener('input', applyFilters);
 
 clearFiltersBtn.addEventListener('click', () => {
@@ -277,6 +277,7 @@ clearFiltersBtn.addEventListener('click', () => {
     filterDestination.value = '';
     filterDataType.value = '';
     filterMessageName.value = '';
+    filterMessageValue.value = '';
     filterRawValue.value = '';
     applyFilters();
 });
@@ -320,16 +321,6 @@ closeDetailsBtn.addEventListener('click', () => {
     selectedPacketTimestamp = null;
     document.querySelectorAll('.packet-item').forEach(item => item.classList.remove('selected'));
 });
-
-// Update packets per second display every second
-setInterval(() => {
-    const now = Date.now();
-    if (now - lastPacketTime > 1000) {
-        packetRate = 0;
-        packetCountLastSecond = 0;
-        packetsPerSecondEl.textContent = '0';
-    }
-}, 1000);
 
 // Connect on load
 connect();

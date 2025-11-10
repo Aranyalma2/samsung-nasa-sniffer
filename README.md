@@ -16,6 +16,10 @@ npm run gui
 node index.js --gui
 ```
 
+Logging:
+- Auto logging packet in readble format.
+- Generate reports on close (Ctrl+c) and runtime (Ctrl+s).
+
 When GUI mode is enabled:
 - Web interface will be available at `http://localhost:8080`
 - WebSocket server runs on the same port for real-time updates
@@ -25,15 +29,13 @@ When GUI mode is enabled:
 
 ### Real-time Packet Display
 - Live packet feed with automatic updates
-- Beautiful card-based interface
 - Click to expand/collapse packet details
-- Shows last 100 packets for performance
 
 ### Filters
 - **Source Address**: Filter by source device address (e.g., `20.00.00` or `Indoor`)
 - **Destination Address**: Filter by destination address
 - **Data Type**: Filter by packet data type (Read, Write, Request, Response, etc.)
-- **Message Name**: Filter by message name (e.g., `temp`, `power`, `mode`)
+- **Message Name**: Filter by message name (e.g., `temp`, `power`, `0x8287`)
 - **Raw Value**: Filter by hexadecimal raw packet data
 
 ### Statistics
