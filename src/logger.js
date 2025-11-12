@@ -5,13 +5,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const {
-	getCurrentTimestamp,
-	PacketTypeName,
-	DataTypeName,
-	MessageNumberNames,
-	bufferToHex,
-} = require("./packet-decoder");
+const { getCurrentTimestamp, PacketTypeName, DataTypeName, MessageNumberNames, bufferToHex } = require("./packet-decoder");
 
 class Logger {
 	constructor(outputDir = "./nasa_logs", options = {}) {
