@@ -2,6 +2,7 @@ const WebSocket = require("ws");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const { PacketTypeName, DataTypeName, MessageSetTypeName, MessageNumberNames } = require("./packet-decoder");
 
 class WebSocketServer {
 	constructor(port = 8080) {
@@ -44,7 +45,7 @@ class WebSocketServer {
 
 	handleHttpRequest(req, res) {
 		let filePath = req.url === "/" ? "/index.html" : req.url;
-		filePath = path.join(__dirname, "public", filePath);
+		filePath = path.join(__dirname, "../public", filePath);
 
 		const extname = path.extname(filePath);
 		const contentTypes = {
@@ -94,9 +95,9 @@ class WebSocketServer {
 			destination: packet.da.toString(),
 			destinationReadable: packet.da.toReadableString(),
 			packetType: packet.command.packetType,
-			packetTypeName: require("./index.js").PacketTypeName[packet.command.packetType] || "Unknown",
+			packetTypeName: PacketTypeName[packet.command.packetType] || "Unknown",
 			dataType: packet.command.dataType,
-			dataTypeName: require("./index.js").DataTypeName[packet.command.dataType] || "Unknown",
+			dataTypeName: DataTypeName[packet.command.dataType] || "Unknown",
 			packetNumber: packet.command.packetNumber,
 			protocolVersion: packet.command.protocolVersion,
 			retryCount: packet.command.retryCount,
@@ -104,10 +105,10 @@ class WebSocketServer {
 				messageNumber: msg.messageNumber,
 				messageNumberHex: "0x" + msg.messageNumber.toString(16).padStart(4, "0"),
 				type: msg.type,
-				typeName: require("./index.js").MessageSetTypeName[msg.type],
+				typeName: MessageSetTypeName[msg.type],
 				value: msg.value,
 				readableValue: msg.getReadableValue(),
-				name: require("./index.js").MessageNumberNames[msg.messageNumber] || "UNKNOWN",
+				name: MessageNumberNames[msg.messageNumber] || "UNKNOWN",
 			})),
 			rawData: Array.from(packet.rawData),
 			rawDataHex: Array.from(packet.rawData)
@@ -136,11 +137,31 @@ class WebSocketServer {
 
 	close() {
 		return new Promise((resolve) => {
+			// Force close all client connections first
+			this.clients.forEach((client) => {
+				try {
+					client.terminate();
+				} catch (e) {
+					// Ignore errors during termination
+				}
+			});
+			this.clients.clear();
+
+			// Close WebSocket server
 			this.wss.close(() => {
+				// Force close the HTTP server with a timeout
 				this.httpServer.close(() => {
-					console.log("WebSocket server closed");
+					console.log("✓ WebSocket server closed");
 					resolve();
 				});
+
+				// Force close after 1 second if not closed gracefully
+				setTimeout(() => {
+					// Destroy all remaining connections
+					this.httpServer.closeAllConnections?.();
+					console.log("✓ WebSocket server force closed");
+					resolve();
+				}, 1000);
 			});
 		});
 	}
