@@ -1,4 +1,7 @@
 */
 !public/
+!public/**/*
+!src/
+!src/**/*
 .env
 yarn.lock
