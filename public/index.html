@@ -16,6 +16,9 @@
         <div class="status-dot" id="statusDot"></div>
         <span id="statusText">Connecting...</span>
       </div>
+      <div class="view-mode-badge" id="viewModeBadge" style="display: none;">
+        VIEW MODE
+      </div>
     </div>
     <div class="stats">
       <div class="stat-item">
@@ -25,6 +28,17 @@
       <div class="stat-item">
         <span class="stat-label">Filtered:</span>
         <span class="stat-value" id="filteredPackets">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Per Page:</span>
+        <select id="packetsPerPage" class="packets-per-page">
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+          <option value="500" selected>500</option>
+          <option value="1000">1000</option>
+          <option value="all">All</option>
+        </select>
       </div>
     </div>
   </div>
@@ -63,17 +77,33 @@
       <label>Raw:</label>
       <input type="text" id="filterRawValue" placeholder="32 20">
     </div>
-    <button class="btn" id="clearFilters">Clear</button>
+    <button class="btn" id="clearFilters">Clear Filter</button>
     <button class="btn btn-pause" id="pauseBtn">⏸ Pause</button>
-    <button class="btn" id="clearPackets">Clear All</button>
+    <button class="btn" id="clearPackets">Clear Packets</button>
     <button class="btn btn-primary" id="toggleDetails">Details ▶</button>
   </div>
 
   <div class="main-content">
-    <div class="packet-list" id="packetList">
-      <div class="empty-state">
-        <div class="empty-icon">📡</div>
-        <div>Waiting for packets...</div>
+    <div class="packet-list-container">
+      <div class="pagination" id="paginationTop">
+        <button class="btn btn-sm" id="firstPage">⏮ First</button>
+        <button class="btn btn-sm" id="prevPage">◀ Prev</button>
+        <span class="page-info" id="pageInfo">Page 1 of 1</span>
+        <button class="btn btn-sm" id="nextPage">Next ▶</button>
+        <button class="btn btn-sm" id="lastPage">Last ⏭</button>
+      </div>
+      <div class="packet-list" id="packetList">
+        <div class="empty-state">
+          <div class="empty-icon">📡</div>
+          <div>Waiting for packets...</div>
+        </div>
+      </div>
+      <div class="pagination" id="paginationBottom">
+        <button class="btn btn-sm" id="firstPageBottom">⏮ First</button>
+        <button class="btn btn-sm" id="prevPageBottom">◀ Prev</button>
+        <span class="page-info" id="pageInfoBottom">Page 1 of 1</span>
+        <button class="btn btn-sm" id="nextPageBottom">Next ▶</button>
+        <button class="btn btn-sm" id="lastPageBottom">Last ⏭</button>
       </div>
     </div>
 

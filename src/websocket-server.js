@@ -5,11 +5,12 @@ const path = require("path");
 const { PacketTypeName, DataTypeName, MessageSetTypeName, MessageNumberNames } = require("./packet-decoder");
 
 class WebSocketServer {
-	constructor(port = 8080) {
+	constructor(port = 8080, viewMode = false) {
 		this.port = port;
 		this.clients = new Set();
 		this.packetHistory = [];
-		this.maxHistory = 1000; // Keep last 1000 packets
+		this.maxHistory = 10000; // Keep last 10000 packets
+		this.viewMode = viewMode; // View mode flag
 
 		// Create HTTP server for serving static files
 		this.httpServer = http.createServer((req, res) => {
@@ -23,10 +24,11 @@ class WebSocketServer {
 			console.log("New WebSocket client connected");
 			this.clients.add(ws);
 
-			// Send packet history to new client
+			// Send view mode status and packet history to new client
 			ws.send(
 				JSON.stringify({
-					type: "history",
+					type: "init",
+					viewMode: this.viewMode,
 					packets: this.packetHistory,
 				}),
 			);
@@ -76,14 +78,76 @@ class WebSocketServer {
 		return new Promise((resolve) => {
 			this.httpServer.listen(this.port, () => {
 				console.log(`\n${"═".repeat(75)}`);
-				console.log("         NASA PROTOCOL SNIFFER - WEB UI ENABLED");
+				if (this.viewMode) {
+					console.log("         NASA PROTOCOL SNIFFER - VIEW MODE");
+				} else {
+					console.log("         NASA PROTOCOL SNIFFER - WEB UI ENABLED");
+				}
 				console.log(`${"═".repeat(75)}`);
 				console.log(`Web UI available at: http://localhost:${this.port}`);
 				console.log(`WebSocket server running on port ${this.port}`);
+				if (this.viewMode) {
+					console.log(`View Mode: Read-only packet replay`);
+				}
 				console.log(`${"═".repeat(75)}\n`);
 				resolve();
 			});
 		});
+	}
+
+	/**
+	 * Load packets from exported file and add to history
+	 * Expands minimized attribute names to full format for UI
+	 * @param {string} filename - Path to exported packets file
+	 */
+	loadPacketsFromFile(filename) {
+		try {
+			const fileContent = fs.readFileSync(filename, "utf8");
+			const exportData = JSON.parse(fileContent);
+
+			// Check for both old (full names) and new (minimized) format
+			const version = exportData.version || exportData.v;
+			const packets = exportData.packets || exportData.p;
+			const exportedAt = exportData.exportedAt || exportData.e;
+
+			if (!version || !packets) {
+				throw new Error("Invalid packet file format");
+			}
+
+			// Expand minimized attribute names to full format for UI
+			this.packetHistory = packets.map((p) => ({
+				timestamp: p.timestamp || p.t,
+				source: p.source || p.s,
+				sourceReadable: p.sourceReadable || p.sr,
+				destination: p.destination || p.d,
+				destinationReadable: p.destinationReadable || p.dr,
+				packetType: p.packetType !== undefined ? p.packetType : p.pt,
+				packetTypeName: p.packetTypeName || p.ptn,
+				dataType: p.dataType !== undefined ? p.dataType : p.dt,
+				dataTypeName: p.dataTypeName || p.dtn,
+				packetNumber: p.packetNumber !== undefined ? p.packetNumber : p.pn,
+				protocolVersion: p.protocolVersion !== undefined ? p.protocolVersion : p.pv,
+				retryCount: p.retryCount !== undefined ? p.retryCount : p.rc,
+				messages: (p.messages || p.m || []).map((m) => ({
+					messageNumber: m.messageNumber !== undefined ? m.messageNumber : m.mn,
+					messageNumberHex: m.messageNumberHex || m.mnh,
+					type: m.type !== undefined ? m.type : m.mt,
+					typeName: m.typeName || m.mtn,
+					value: m.value !== undefined ? m.value : m.v,
+					readableValue: m.readableValue || m.rv,
+					name: m.name || m.n,
+				})),
+				rawData: p.rawData || p.rd,
+				rawDataHex: p.rawDataHex || p.rdh,
+			}));
+
+			console.log(`✓ Loaded ${this.packetHistory.length} packets from ${filename}`);
+			console.log(`  Exported at: ${exportedAt}`);
+
+			return this.packetHistory.length;
+		} catch (error) {
+			throw new Error(`Failed to load packet file: ${error.message}`);
+		}
 	}
 
 	broadcastPacket(packet) {

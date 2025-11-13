@@ -5,6 +5,11 @@ let filteredPackets = [];
 let isConnected = false;
 let isPaused = false;
 let selectedPacketTimestamp = null; // Track by timestamp instead of index
+let viewMode = false; // View mode flag
+
+// Pagination
+let currentPage = 1;
+let packetsPerPage = 500;
 
 // DOM elements
 const statusDot = document.getElementById('statusDot');
@@ -14,6 +19,8 @@ const filteredPacketsEl = document.getElementById('filteredPackets');
 const packetListEl = document.getElementById('packetList');
 const detailsPanel = document.getElementById('detailsPanel');
 const detailsContent = document.getElementById('detailsContent');
+const viewModeBadge = document.getElementById('viewModeBadge');
+const packetsPerPageEl = document.getElementById('packetsPerPage');
 
 // Filter elements
 const filterSource = document.getElementById('filterSource');
@@ -27,6 +34,19 @@ const clearPacketsBtn = document.getElementById('clearPackets');
 const pauseBtn = document.getElementById('pauseBtn');
 const toggleDetailsBtn = document.getElementById('toggleDetails');
 const closeDetailsBtn = document.getElementById('closeDetails');
+
+// Pagination elements
+const firstPageBtn = document.getElementById('firstPage');
+const prevPageBtn = document.getElementById('prevPage');
+const nextPageBtn = document.getElementById('nextPage');
+const lastPageBtn = document.getElementById('lastPage');
+const pageInfoEl = document.getElementById('pageInfo');
+
+const firstPageBottomBtn = document.getElementById('firstPageBottom');
+const prevPageBottomBtn = document.getElementById('prevPageBottom');
+const nextPageBottomBtn = document.getElementById('nextPageBottom');
+const lastPageBottomBtn = document.getElementById('lastPageBottom');
+const pageInfoBottomEl = document.getElementById('pageInfoBottom');
 
 // Connect to WebSocket
 function connect() {
@@ -59,16 +79,33 @@ function connect() {
     ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
         
-        if (message.type === 'history') {
-            // Load historical packets
+        if (message.type === 'init') {
+            // Initialize with view mode status and history
+            viewMode = message.viewMode;
+            packets = message.packets || [];
+            
+            // Update UI for view mode
+            if (viewMode) {
+                viewModeBadge.style.display = 'block';
+                pauseBtn.disabled = true;
+                pauseBtn.style.opacity = '0.5';
+                pauseBtn.style.cursor = 'not-allowed';
+                clearPacketsBtn.disabled = true;
+                clearPacketsBtn.style.opacity = '0.5';
+                clearPacketsBtn.style.cursor = 'not-allowed';
+            }
+            
+            applyFilters();
+        } else if (message.type === 'history') {
+            // Legacy support - Load historical packets
             packets = message.packets;
             applyFilters();
         } else if (message.type === 'packet') {
             // Add new packet (backend always logs, even when UI is paused)
             packets.push(message.data);
             
-            // Only update UI if not paused
-            if (!isPaused) {
+            // Only update UI if not paused and not in view mode
+            if (!isPaused && !viewMode) {
                 applyFilters();
             }
         }
@@ -144,8 +181,42 @@ function updateUI() {
     totalPacketsEl.textContent = packets.length;
     filteredPacketsEl.textContent = filteredPackets.length;
     
-    // Render packets (show last 500 for performance, single line each)
-    const packetsToShow = filteredPackets.slice(-500).reverse();
+    // Calculate pagination
+    const perPage = packetsPerPage === 'all' ? filteredPackets.length : parseInt(packetsPerPage);
+    const totalPages = perPage > 0 ? Math.max(1, Math.ceil(filteredPackets.length / perPage)) : 1;
+    
+    // Adjust current page if needed
+    if (currentPage > totalPages) {
+        currentPage = totalPages;
+    }
+    if (currentPage < 1) {
+        currentPage = 1;
+    }
+    
+    // Get packets for current page (newest first)
+    const reversedPackets = [...filteredPackets].reverse();
+    const startIdx = (currentPage - 1) * perPage;
+    const endIdx = packetsPerPage === 'all' ? reversedPackets.length : startIdx + perPage;
+    const packetsToShow = reversedPackets.slice(startIdx, endIdx);
+    
+    // Update pagination info
+    const pageText = `Page ${currentPage} of ${totalPages}`;
+    pageInfoEl.textContent = pageText;
+    pageInfoBottomEl.textContent = pageText;
+    
+    // Enable/disable pagination buttons
+    const enableFirst = currentPage > 1;
+    const enableLast = currentPage < totalPages;
+    
+    firstPageBtn.disabled = !enableFirst;
+    prevPageBtn.disabled = !enableFirst;
+    nextPageBtn.disabled = !enableLast;
+    lastPageBtn.disabled = !enableLast;
+    
+    firstPageBottomBtn.disabled = !enableFirst;
+    prevPageBottomBtn.disabled = !enableFirst;
+    nextPageBottomBtn.disabled = !enableLast;
+    lastPageBottomBtn.disabled = !enableLast;
     
     if (packetsToShow.length === 0) {
         packetListEl.innerHTML = `
@@ -265,12 +336,39 @@ function showPacketDetails(packet) {
 }
 
 // Event listeners
-filterSource.addEventListener('input', applyFilters);
-filterDestination.addEventListener('input', applyFilters);
-filterDataType.addEventListener('change', applyFilters);
-filterMessageName.addEventListener('input', applyFilters);
-filterMessageValue.addEventListener('input', applyFilters);
-filterRawValue.addEventListener('input', applyFilters);
+filterSource.addEventListener('input', () => { currentPage = 1; applyFilters(); });
+filterDestination.addEventListener('input', () => { currentPage = 1; applyFilters(); });
+filterDataType.addEventListener('change', () => { currentPage = 1; applyFilters(); });
+filterMessageName.addEventListener('input', () => { currentPage = 1; applyFilters(); });
+filterMessageValue.addEventListener('input', () => { currentPage = 1; applyFilters(); });
+filterRawValue.addEventListener('input', () => { currentPage = 1; applyFilters(); });
+
+packetsPerPageEl.addEventListener('change', (e) => {
+    packetsPerPage = e.target.value;
+    currentPage = 1;
+    applyFilters();
+});
+
+// Pagination controls
+firstPageBtn.addEventListener('click', () => { currentPage = 1; updateUI(); });
+prevPageBtn.addEventListener('click', () => { currentPage = Math.max(1, currentPage - 1); updateUI(); });
+nextPageBtn.addEventListener('click', () => { currentPage++; updateUI(); });
+lastPageBtn.addEventListener('click', () => {
+    const perPage = packetsPerPage === 'all' ? filteredPackets.length : parseInt(packetsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filteredPackets.length / perPage));
+    currentPage = totalPages;
+    updateUI();
+});
+
+firstPageBottomBtn.addEventListener('click', () => { currentPage = 1; updateUI(); });
+prevPageBottomBtn.addEventListener('click', () => { currentPage = Math.max(1, currentPage - 1); updateUI(); });
+nextPageBottomBtn.addEventListener('click', () => { currentPage++; updateUI(); });
+lastPageBottomBtn.addEventListener('click', () => {
+    const perPage = packetsPerPage === 'all' ? filteredPackets.length : parseInt(packetsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filteredPackets.length / perPage));
+    currentPage = totalPages;
+    updateUI();
+});
 
 clearFiltersBtn.addEventListener('click', () => {
     filterSource.value = '';
@@ -279,13 +377,17 @@ clearFiltersBtn.addEventListener('click', () => {
     filterMessageName.value = '';
     filterMessageValue.value = '';
     filterRawValue.value = '';
+    currentPage = 1;
     applyFilters();
 });
 
 clearPacketsBtn.addEventListener('click', () => {
+    if (viewMode) return; // Disabled in view mode
+    
     if (confirm('Clear all packets from the display?')) {
         packets = [];
         selectedPacketTimestamp = null;
+        currentPage = 1;
         applyFilters();
         detailsPanel.classList.remove('open');
         toggleDetailsBtn.textContent = 'Details ▶';
@@ -293,6 +395,8 @@ clearPacketsBtn.addEventListener('click', () => {
 });
 
 pauseBtn.addEventListener('click', () => {
+    if (viewMode) return; // Disabled in view mode
+    
     isPaused = !isPaused;
     if (isPaused) {
         pauseBtn.textContent = '▶ Resume';

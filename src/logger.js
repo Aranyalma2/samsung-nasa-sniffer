@@ -5,7 +5,14 @@
 
 const fs = require("fs");
 const path = require("path");
-const { getCurrentTimestamp, PacketTypeName, DataTypeName, MessageNumberNames, bufferToHex } = require("./packet-decoder");
+const {
+	getCurrentTimestamp,
+	PacketTypeName,
+	DataTypeName,
+	MessageNumberNames,
+	MessageSetTypeName,
+	bufferToHex,
+} = require("./packet-decoder");
 
 class Logger {
 	constructor(outputDir = "./nasa_logs", options = {}) {
@@ -146,6 +153,72 @@ class Logger {
 		fs.writeFileSync(filename, output.join("\n"), "utf8");
 
 		console.log(`\n✓ Verbose export saved: ${filename}\n`);
+		return filename;
+	}
+
+	/**
+	 * Export packets to optimized storage format (JSON)
+	 * Attribute names are minimized to reduce file size
+	 * @param {string} filename - Optional filename for export
+	 * @returns {string} Path to exported file
+	 */
+	exportPackets(filename = null) {
+		if (!filename) {
+			const timestamp = new Date().toISOString().replace(/:/g, "-").split(".")[0];
+			filename = path.join(this.outputDir, `nasa_packets_${timestamp}.json`);
+		}
+
+		// Collect all packets from groups in chronological order
+		const allPackets = [];
+		const sortedGroups = Array.from(this.packetGroups.values());
+		sortedGroups.forEach((group) => {
+			allPackets.push(...group.allPackets);
+		});
+
+		// Sort by timestamp
+		allPackets.sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1));
+
+		// Convert to optimized format with minimized attribute names
+		// Key mapping: t=timestamp, s=source, sr=sourceReadable, d=destination, dr=destinationReadable,
+		// pt=packetType, ptn=packetTypeName, dt=dataType, dtn=dataTypeName, pn=packetNumber,
+		// pv=protocolVersion, rc=retryCount, m=messages, mn=messageNumber, mnh=messageNumberHex,
+		// mt=type, mtn=typeName, v=value, rv=readableValue, n=name, rd=rawData, rdh=rawDataHex
+		const exportData = {
+			v: "1.0", // version
+			e: getCurrentTimestamp(), // exportedAt
+			tp: this.totalPackets, // totalPackets
+			p: allPackets.map((packet) => ({
+				t: packet.timestamp,
+				s: packet.sa.toString(),
+				sr: packet.sa.toReadableString(),
+				d: packet.da.toString(),
+				dr: packet.da.toReadableString(),
+				pt: packet.command.packetType,
+				ptn: PacketTypeName[packet.command.packetType] || "Unknown",
+				dt: packet.command.dataType,
+				dtn: DataTypeName[packet.command.dataType] || "Unknown",
+				pn: packet.command.packetNumber,
+				pv: packet.command.protocolVersion,
+				rc: packet.command.retryCount,
+				m: packet.messages.map((msg) => ({
+					mn: msg.messageNumber,
+					mnh: "0x" + msg.messageNumber.toString(16).padStart(4, "0"),
+					mt: msg.type,
+					mtn: MessageSetTypeName[msg.type],
+					v: msg.value,
+					rv: msg.getReadableValue(),
+					n: MessageNumberNames[msg.messageNumber] || "UNKNOWN",
+				})),
+				rd: Array.from(packet.rawData),
+				rdh: bufferToHex(packet.rawData, " "),
+			})),
+		};
+
+		fs.writeFileSync(filename, JSON.stringify(exportData), "utf8");
+
+		console.log(`\n✓ Packets exported: ${filename}`);
+		console.log(`  Total packets: ${this.totalPackets}`);
+		console.log(`  File size: ${(fs.statSync(filename).size / 1024).toFixed(2)} KB\n`);
 		return filename;
 	}
 

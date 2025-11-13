@@ -387,6 +387,70 @@ class Packet {
 
 		return `${this.sa.toString()}->${this.da.toString()}:${DataTypeName[this.command.dataType]}:[${msgSignature}]`;
 	}
+
+	toFormattedString(includeRaw = true) {
+		let output = [];
+
+		output.push("┌─────────────────────────────────────────────────────────────────");
+		output.push(`│ Timestamp: ${this.timestamp}`);
+		output.push("├─────────────────────────────────────────────────────────────────");
+		output.push(`│ Source:      ${this.sa.toReadableString()}`);
+		output.push(`│ Destination: ${this.da.toReadableString()}`);
+		output.push("├─────────────────────────────────────────────────────────────────");
+		output.push(`│ Packet Type: ${PacketTypeName[this.command.packetType] || "Unknown"}`);
+		output.push(`│ Data Type:   ${DataTypeName[this.command.dataType] || "Unknown"}`);
+		output.push(`│ Packet #:    ${this.command.packetNumber}`);
+		output.push(`│ Protocol:    v${this.command.protocolVersion}`);
+		output.push(`│ Retry Count: ${this.command.retryCount}`);
+		output.push("├─────────────────────────────────────────────────────────────────");
+		output.push(`│ Messages (${this.messages.length}):`);
+
+		for (let i = 0; i < this.messages.length; i++) {
+			output.push(`│   ${i + 1}. ${this.messages[i].toString()}`);
+		}
+
+		if (includeRaw) {
+			output.push("├─────────────────────────────────────────────────────────────────");
+			output.push("│ Raw Packet Data:");
+			const hexData = bufferToHex(this.rawData, " ");
+			const chunks = hexData.match(/.{1,48}/g) || [];
+			chunks.forEach((chunk) => {
+				output.push(`│   ${chunk}`);
+			});
+		}
+
+		output.push("└─────────────────────────────────────────────────────────────────");
+		output.push("");
+
+		return output.join("\n");
+	}
+
+	toCompactString() {
+		// Compact multi-line format with all packet information
+		const msgDetails = this.messages
+			.map((m) => {
+				const name = MessageNumberNames[m.messageNumber] || `0x${m.messageNumber.toString(16)}`;
+				const value = m.getReadableValue();
+				return `${name}=${value}`;
+			})
+			.join(", ");
+
+		// Format raw data in space-efficient hex format
+		const rawHex = bufferToHex(this.rawData, " ");
+
+		// Build compact multi-line output
+		const lines = [];
+		lines.push(`[${this.timestamp}] ${this.sa.toReadableString()} → ${this.da.toReadableString()}`);
+		lines.push(
+			`  Type: ${PacketTypeName[this.command.packetType]} | Data: ${DataTypeName[this.command.dataType]} | Pkt#: ${this.command.packetNumber} | Proto: v${
+				this.command.protocolVersion
+			} | Retry: ${this.command.retryCount}`,
+		);
+		lines.push(`  Msgs: ${this.messages.length} | ${msgDetails}`);
+		lines.push(`  Raw: ${rawHex}`);
+
+		return lines.join("\n");
+	}
 }
 
 // ==================== Packet Analyzer ====================
