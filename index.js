@@ -49,7 +49,8 @@ class NasaSniffer {
 			console.log("  Ctrl+C : Exit");
 			console.log("  Ctrl+S : Save report");
 			console.log("  Ctrl+P : Print statistics");
-			console.log("  Ctrl+E : Export verbose log\n");
+			console.log("  Ctrl+E : Export verbose log");
+			console.log("  Ctrl+X : Export packets (JSON)\n");
 		});
 
 		this.interface.on("data", () => {
@@ -132,18 +133,60 @@ async function main() {
 	// Parse command line arguments
 	const args = process.argv.slice(2);
 	const guiMode = args.includes("--gui");
+	const viewModeIndex = args.findIndex((arg) => arg === "--view");
+	const viewMode = viewModeIndex !== -1;
+	const viewFile = viewMode && args[viewModeIndex + 1] ? args[viewModeIndex + 1] : null;
 
 	// Configuration from environment
 	const OUTPUT_DIR = process.env.OUTPUT_DIR || "./nasa_logs";
 	const WEB_PORT = parseInt(process.env.WEB_PORT || "8080");
 	const LOG_FORMAT = process.env.LOG_FORMAT || "compact"; // 'compact', 'verbose', or 'none'
 
+	// ==================== VIEW MODE ====================
+	if (viewMode) {
+		if (!viewFile) {
+			console.error("✗ Error: --view requires a filename");
+			console.error("Usage: node index.js --view <packet-file.json>");
+			process.exit(1);
+		}
+
+		try {
+			const WebSocketServer = require("./src/websocket-server");
+			const webSocketServer = new WebSocketServer(WEB_PORT, true); // true = view mode
+
+			// Load packets from file
+			webSocketServer.loadPacketsFromFile(viewFile);
+
+			// Start server
+			await webSocketServer.start();
+
+			console.log("View mode active. Press Ctrl+C to exit.\n");
+
+			// Handle shutdown
+			const shutdown = async () => {
+				console.log("\n\nShutting down view mode...");
+				await webSocketServer.close();
+				process.exit(0);
+			};
+
+			process.on("SIGINT", shutdown);
+			process.on("SIGTERM", shutdown);
+
+			return; // Exit main function for view mode
+		} catch (err) {
+			console.error(`✗ Failed to start view mode: ${err.message}`);
+			process.exit(1);
+		}
+	}
+
+	// ==================== NORMAL/GUI MODE ====================
+
 	// Initialize WebSocket server if GUI mode is enabled
 	let webSocketServer = null;
 	if (guiMode) {
 		try {
 			const WebSocketServer = require("./src/websocket-server");
-			webSocketServer = new WebSocketServer(WEB_PORT);
+			webSocketServer = new WebSocketServer(WEB_PORT, false); // false = live mode
 			await webSocketServer.start();
 		} catch (err) {
 			console.error(`✗ Failed to start WebSocket server: ${err.message}`);
@@ -223,6 +266,9 @@ async function main() {
 		} else if (key[0] === 5) {
 			// Ctrl+E
 			logger.exportVerbose();
+		} else if (key[0] === 24) {
+			// Ctrl+X
+			logger.exportPackets();
 		}
 	});
 
