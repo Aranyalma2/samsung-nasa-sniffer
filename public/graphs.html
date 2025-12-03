@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NASA Protocol - Graph Viewer</title>
+  <link rel="stylesheet" href="graphs.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+
+<body>
+  <div class="header">
+    <div class="header-left">
+      <div class="title">NASA Protocol - Graph Viewer</div>
+      <div class="status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting...</span>
+      </div>
+      <div class="view-mode-badge" id="viewModeBadge" style="display: none;">
+        📁 VIEW MODE
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-label">Total Packets:</span>
+        <span class="stat-value" id="totalPackets">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Graphs:</span>
+        <span class="stat-value" id="graphCount">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn btn-primary" id="addGraphBtn">+ Add Graph</button>
+    <button class="btn" id="clearAllBtn">Clear All Graphs</button>
+    <button class="btn" id="refreshBtn">Refresh Data</button>
+    <label class="auto-refresh">
+      <input type="checkbox" id="autoRefresh" checked>
+      Auto-refresh
+    </label>
+  </div>
+
+  <div class="main-content">
+    <div class="graphs-container" id="graphsContainer">
+      <div class="empty-state">
+        <div class="empty-icon">📈</div>
+        <div>No graphs created yet</div>
+        <div class="empty-hint">Click "Add Graph" to start visualizing packet data</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Graph Modal -->
+  <div class="modal" id="graphModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Add New Graph</h2>
+        <button class="close-btn" id="closeModalBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Graph Title:</label>
+          <input type="text" id="graphTitle" placeholder="e.g., Temperature Sensor Data">
+        </div>
+
+        <div class="form-group">
+          <label>Source Address (comma-separated):</label>
+          <input type="text" id="filterSource" placeholder="e.g., 20.00.00, 20.01.00 (leave empty for all)">
+          <div class="form-hint">Multiple addresses will be shown with different colors</div>
+        </div>
+
+        <div class="form-group">
+          <label>Destination Address (comma-separated):</label>
+          <input type="text" id="filterDestination" placeholder="e.g., 50.00.00, 50.01.00 (leave empty for all)">
+          <div class="form-hint">Multiple addresses will be shown with different colors</div>
+        </div>
+
+        <div class="form-group">
+          <label>Data Type:</label>
+          <select id="filterDataType">
+            <option value="">All</option>
+            <option value="Read">Read</option>
+            <option value="Write">Write</option>
+            <option value="Request">Request</option>
+            <option value="Response">Response</option>
+            <option value="Notification">Notification</option>
+            <option value="Ack">Ack</option>
+            <option value="Nack">Nack</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Message IDs (comma-separated):</label>
+          <input type="text" id="filterMessageIds" placeholder="e.g., 0x4000, 0x4001, TEMP_SENSOR">
+          <div class="form-hint">You can use hex (0x4000) or message names</div>
+        </div>
+
+        <div class="form-group">
+          <label>Chart Type:</label>
+          <select id="chartType">
+            <option value="line">Line Chart</option>
+            <option value="scatter">Scatter Plot</option>
+            <option value="bar">Bar Chart</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="showPoints">
+            Show data points on line
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="cancelModalBtn">Cancel</button>
+        <button class="btn btn-primary" id="saveGraphBtn">Save Graph</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="graphs.js"></script>
+</body>
+
+</html>

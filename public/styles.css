@@ -204,6 +204,17 @@ body {
     border-color: #66bb6a;
 }
 
+.btn-graphs {
+    background: #7b1fa2;
+    border-color: #8e24aa;
+    color: white;
+}
+
+.btn-graphs:hover {
+    background: #8e24aa;
+    border-color: #9c27b0;
+}
+
 .main-content {
     display: flex;
     flex: 1;

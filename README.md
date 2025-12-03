@@ -1,12 +1,14 @@
 # Samsung NASA Protocol Packet Sniffer
 
-A Samsung NASA protocol packet sniffer with support for both COM port and TCP interfaces, featuring real-time web UI and multiple logging formats.
+A Samsung NASA protocol packet sniffer with support for both COM port and TCP interfaces, featuring real-time web UI, packet export/import, and advanced graph visualization.
 
 ## Features
 
 - **Multiple Interface Support**: COM port (serial) and TCP client
-- **Real-time Web UI**: Live packet monitoring with filtering
+- **Real-time Web UI**: Live packet monitoring with filtering and pagination
 - **Flexible Logging**: None, compact, verbose, and report formats
+- **Packet Export/Import**: Save packets to optimized JSON format and replay offline
+- **Graph Viewer**: Visualize message values over time with multi-source color coding
 - **Packet Analysis**: Intelligent grouping and statistics
 
 ## Installation
@@ -34,11 +36,17 @@ TCP_PORT=5000
 
 # Logging
 OUTPUT_DIR=./nasa_logs
-LOG_FORMAT=compact
+LOG_FORMAT=compact    # Options: compact, verbose, none
 
 # Web UI
 WEB_PORT=8080
 ```
+
+### Log Format Options
+
+- **`compact`** (default): Multi-line format with all packet details (4 lines per packet)
+- **`verbose`**: Full formatted output with complete message details
+- **`none`**: Disable file logging (useful for GUI-only monitoring)
 
 ## Usage
 
@@ -58,12 +66,29 @@ node index.js --gui
 
 Web UI will be available at `http://localhost:8080`
 
-### Keyboard Commands
+### View Mode (Offline Packet Replay)
+Load and view previously exported packets without connecting to any interface:
 
-- **Ctrl+C** - Exit
-- **Ctrl+S** - Save report
-- **Ctrl+P** - Print statistics
-- **Ctrl+E** - Export verbose log
+```bash
+node index.js --view <packet-file.json>
+# or
+npm run gui -- --view nasa_logs/nasa_packets_2025-11-14.json
+```
+
+View mode features:
+- Opens web UI in read-only mode
+- No live data capture
+- Browse exported packet history
+- Full filtering and analysis capabilities
+- Access to graph viewer
+
+### Keyboard Commands (CLI/GUI Mode)
+
+- **Ctrl+C** - Exit application
+- **Ctrl+S** - Save report (grouped statistics)
+- **Ctrl+P** - Print statistics to console
+- **Ctrl+E** - Export verbose log file
+- **Ctrl+X** - Export packets to JSON format
 
 ## Interface Modes
 
@@ -110,13 +135,13 @@ LOG_FORMAT=verbose
 ```
 
 ### Report Format
-Grouped statistics with example packets. Generated manually:
-- Ctrl+S to save report
+Grouped statistics with example packets. Generated manually with Ctrl+S.
 
 ## Web UI Features
 
 ### Real-time Packet Display
 - Live packet feed with automatic updates
+- Configurable pagination (50/100/200/500/1000 packets per page)
 - Click to expand/collapse packet details
 
 ### Filters
@@ -127,9 +152,34 @@ Grouped statistics with example packets. Generated manually:
 - **Message Value**: Filter by message value
 - **Raw Value**: Filter by hexadecimal raw packet data
 
+### Packet Export
+Export captured packets to optimized JSON format:
+- Press **Ctrl+X** to export
+- Minimized attribute names for reduced file size
+- Compatible with view mode for offline analysis
+
+### Graph Viewer
+Visualize message values over time with advanced charting:
+- Access via **"Graphs"** button in main UI
+- Create multiple graphs with independent filters
+- Support for line, scatter, and bar charts
+- Real-time updates with live data
+- Color-coded lines for multiple source addresses
+
+#### Graph Features
+- **Multi-address filtering**: Comma-separated addresses (e.g., `20.00.00, 20.01.00`)
+- **Source separation**: Each source address gets a unique color
+- **Message filtering**: Filter by message ID or name
+- **Data type filtering**: Filter by packet data type
+- **Auto-refresh**: Automatically update graphs with new data
+- **Statistics**: Min/Max/Average values displayed
+- **Time-series display**: X-axis shows timestamps
+- **Interactive tooltips**: Hover to see detailed information
+
 ### Statistics
 - Total packets captured
 - Filtered packets count
+- Graphs count (in graph viewer)
 
 ### Packet Details
 Each packet shows:
