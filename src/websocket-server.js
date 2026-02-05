@@ -2,7 +2,7 @@ const WebSocket = require("ws");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { PacketTypeName, DataTypeName, MessageSetTypeName, MessageNumberNames } = require("./packet-decoder");
+const { PacketTypeName, DataTypeName, MessageSetTypeName, MessageNumberNames, AddressClassName } = require("./packet-decoder");
 
 class WebSocketServer {
 	constructor(port = 8080, viewMode = false) {
@@ -98,6 +98,7 @@ class WebSocketServer {
 	/**
 	 * Load packets from exported file and add to history
 	 * Expands minimized attribute names to full format for UI
+	 * Resolves names from decoder const objects dynamically
 	 * @param {string} filename - Path to exported packets file
 	 */
 	loadPacketsFromFile(filename) {
@@ -114,34 +115,121 @@ class WebSocketServer {
 				throw new Error("Invalid packet file format");
 			}
 
-			// Expand minimized attribute names to full format for UI
-			this.packetHistory = packets.map((p) => ({
-				timestamp: p.timestamp || p.t,
-				source: p.source || p.s,
-				sourceReadable: p.sourceReadable || p.sr,
-				destination: p.destination || p.d,
-				destinationReadable: p.destinationReadable || p.dr,
-				packetType: p.packetType !== undefined ? p.packetType : p.pt,
-				packetTypeName: p.packetTypeName || p.ptn,
-				dataType: p.dataType !== undefined ? p.dataType : p.dt,
-				dataTypeName: p.dataTypeName || p.dtn,
-				packetNumber: p.packetNumber !== undefined ? p.packetNumber : p.pn,
-				protocolVersion: p.protocolVersion !== undefined ? p.protocolVersion : p.pv,
-				retryCount: p.retryCount !== undefined ? p.retryCount : p.rc,
-				messages: (p.messages || p.m || []).map((m) => ({
-					messageNumber: m.messageNumber !== undefined ? m.messageNumber : m.mn,
-					messageNumberHex: m.messageNumberHex || m.mnh,
-					type: m.type !== undefined ? m.type : m.mt,
-					typeName: m.typeName || m.mtn,
-					value: m.value !== undefined ? m.value : m.v,
-					readableValue: m.readableValue || m.rv,
-					name: m.name || m.n,
-				})),
-				rawData: p.rawData || p.rd,
-				rawDataHex: p.rawDataHex || p.rdh,
-			}));
+			// Helper to format address as readable string
+			const formatAddressReadable = (klass, channel, address) => {
+				const className = AddressClassName[klass] || "Unknown";
+				const hex = (n) => n.toString(16).padStart(2, "0").toUpperCase();
+				return `${className}(${hex(klass)}.${hex(channel)}.${hex(address)})`;
+			};
+
+			// Helper to format address as hex string
+			const formatAddress = (klass, channel, address) => {
+				const hex = (n) => n.toString(16).padStart(2, "0").toUpperCase();
+				return `${hex(klass)}.${hex(channel)}.${hex(address)}`;
+			};
+
+			// Helper to format raw data as hex
+			const formatRawDataHex = (rawData) => {
+				if (!rawData) return "";
+				return rawData.map((b) => b.toString(16).padStart(2, "0").toUpperCase()).join(" ");
+			};
+
+			// Expand minimized attribute names and resolve names from decoder
+			this.packetHistory = packets.map((p) => {
+				// Handle both v2.0 (new format) and v1.0 (old format)
+				const isV2 = version === "2.0";
+
+				// Extract address components
+				let sourceClass, sourceChannel, sourceAddress;
+				let destClass, destChannel, destAddress;
+
+				if (isV2) {
+					// v2.0: separate components
+					sourceClass = p.sc;
+					sourceChannel = p.sch;
+					sourceAddress = p.sa;
+					destClass = p.dc;
+					destChannel = p.dch;
+					destAddress = p.da;
+				} else {
+					// v1.0: parse from string format
+					const sourceStr = p.source || p.s || "00.00.00";
+					const destStr = p.destination || p.d || "00.00.00";
+					const sParts = sourceStr.split(".").map((s) => parseInt(s, 16));
+					const dParts = destStr.split(".").map((s) => parseInt(s, 16));
+					sourceClass = sParts[0] || 0;
+					sourceChannel = sParts[1] || 0;
+					sourceAddress = sParts[2] || 0;
+					destClass = dParts[0] || 0;
+					destChannel = dParts[1] || 0;
+					destAddress = dParts[2] || 0;
+				}
+
+				const packetType = p.packetType !== undefined ? p.packetType : p.pt;
+				const dataType = p.dataType !== undefined ? p.dataType : p.dt;
+				const rawData = p.rawData || p.rd;
+
+				return {
+					timestamp: p.timestamp || p.t,
+					source: formatAddress(sourceClass, sourceChannel, sourceAddress),
+					sourceReadable: formatAddressReadable(sourceClass, sourceChannel, sourceAddress),
+					destination: formatAddress(destClass, destChannel, destAddress),
+					destinationReadable: formatAddressReadable(destClass, destChannel, destAddress),
+					packetType,
+					packetTypeName: PacketTypeName[packetType] || "Unknown",
+					dataType,
+					dataTypeName: DataTypeName[dataType] || "Unknown",
+					packetNumber: p.packetNumber !== undefined ? p.packetNumber : p.pn,
+					protocolVersion: p.protocolVersion !== undefined ? p.protocolVersion : p.pv,
+					retryCount: p.retryCount !== undefined ? p.retryCount : p.rc,
+					messages: (p.messages || p.m || []).map((m) => {
+						const messageNumber = m.messageNumber !== undefined ? m.messageNumber : m.mn;
+						const messageType = m.type !== undefined ? m.type : m.mt;
+						const value = m.value !== undefined ? m.value : m.v;
+
+						// Resolve names from decoder
+						const messageName = MessageNumberNames[messageNumber] || "UNKNOWN";
+						const messageTypeName = MessageSetTypeName[messageType] || "Unknown";
+
+						// Calculate readable value (simplified version of MessageSet.getReadableValue)
+						let readableValue;
+						if (m.readableValue || m.rv) {
+							// Use stored readable value if available (v1.0 format)
+							readableValue = m.readableValue || m.rv;
+						} else {
+							// Generate readable value
+							if (messageName && messageName.toLowerCase().includes("temp")) {
+								readableValue = `${(value / 10.0).toFixed(1)}°C`;
+							} else if (messageName && messageName.toLowerCase().includes("power")) {
+								readableValue = value ? "ON" : "OFF";
+							} else if (messageNumber === 0x4001) {
+								const modes = ["Auto", "Cool", "Dry", "Fan", "Heat"];
+								readableValue = modes[value] || `Unknown(${value})`;
+							} else if (messageNumber === 0x4006 || messageNumber === 0x4007) {
+								const fans = ["Auto", "Low", "Mid", "High", "Turbo"];
+								readableValue = fans[value] || `Unknown(${value})`;
+							} else {
+								readableValue = value.toString();
+							}
+						}
+
+						return {
+							messageNumber,
+							messageNumberHex: "0x" + messageNumber.toString(16).padStart(4, "0"),
+							type: messageType,
+							typeName: messageTypeName,
+							value,
+							readableValue,
+							name: messageName,
+						};
+					}),
+					rawData,
+					rawDataHex: formatRawDataHex(rawData),
+				};
+			});
 
 			console.log(`✓ Loaded ${this.packetHistory.length} packets from ${filename}`);
+			console.log(`  Format version: ${version}`);
 			console.log(`  Exported at: ${exportedAt}`);
 
 			return this.packetHistory.length;

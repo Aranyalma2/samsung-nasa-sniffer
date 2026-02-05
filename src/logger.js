@@ -172,38 +172,36 @@ class Logger {
 		allPackets.sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1));
 
 		// Convert to optimized format with minimized attribute names
-		// Key mapping: t=timestamp, s=source, sr=sourceReadable, d=destination, dr=destinationReadable,
-		// pt=packetType, ptn=packetTypeName, dt=dataType, dtn=dataTypeName, pn=packetNumber,
-		// pv=protocolVersion, rc=retryCount, m=messages, mn=messageNumber, mnh=messageNumberHex,
-		// mt=type, mtn=typeName, v=value, rv=readableValue, n=name, rd=rawData, rdh=rawDataHex
+		// Key mapping: t=timestamp, sc=sourceClass, sch=sourceChannel, sa=sourceAddress,
+		// dc=destClass, dch=destChannel, da=destAddress,
+		// pt=packetType, dt=dataType, pn=packetNumber,
+		// pv=protocolVersion, rc=retryCount, m=messages, mn=messageNumber,
+		// mt=messageType, v=value, rd=rawData
+		// Names (AddressClassName, PacketTypeName, DataTypeName, MessageSetTypeName, MessageNumberNames)
+		// are resolved on load from decoder const objects to save space
 		const exportData = {
-			v: "1.0", // version
+			v: "2.0", // version (bumped to indicate new format without stored names)
 			e: getCurrentTimestamp(), // exportedAt
 			tp: this.totalPackets, // totalPackets
 			p: allPackets.map((packet) => ({
 				t: packet.timestamp,
-				s: packet.sa.toString(),
-				sr: packet.sa.toReadableString(),
-				d: packet.da.toString(),
-				dr: packet.da.toReadableString(),
+				sc: packet.sa.klass,
+				sch: packet.sa.channel,
+				sa: packet.sa.address,
+				dc: packet.da.klass,
+				dch: packet.da.channel,
+				da: packet.da.address,
 				pt: packet.command.packetType,
-				ptn: PacketTypeName[packet.command.packetType] || "Unknown",
 				dt: packet.command.dataType,
-				dtn: DataTypeName[packet.command.dataType] || "Unknown",
 				pn: packet.command.packetNumber,
 				pv: packet.command.protocolVersion,
 				rc: packet.command.retryCount,
 				m: packet.messages.map((msg) => ({
 					mn: msg.messageNumber,
-					mnh: "0x" + msg.messageNumber.toString(16).padStart(4, "0"),
 					mt: msg.type,
-					mtn: MessageSetTypeName[msg.type],
 					v: msg.value,
-					rv: msg.getReadableValue(),
-					n: MessageNumberNames[msg.messageNumber] || "UNKNOWN",
 				})),
 				rd: Array.from(packet.rawData),
-				rdh: bufferToHex(packet.rawData, " "),
 			})),
 		};
 
