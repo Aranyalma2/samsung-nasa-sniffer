@@ -27,6 +27,9 @@ let graphs = [];
 let nextGraphId = 1;
 let editingGraphId = null;
 
+// LocalStorage key for graph configurations
+const STORAGE_KEY = 'nasa-sniffer-graphs-config';
+
 // DOM elements
 const statusDot = document.getElementById("statusDot");
 const statusText = document.getElementById("statusText");
@@ -120,6 +123,62 @@ function connect() {
 function updateStats() {
 	totalPacketsEl.textContent = packets.length;
 	graphCountEl.textContent = graphs.length;
+}
+
+// ==================== LocalStorage Management ====================
+function saveGraphConfigurations() {
+	try {
+		const configs = graphs.map(graph => ({
+			id: graph.id,
+			config: graph.config
+		}));
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(configs));
+		console.log('Graph configurations saved to localStorage');
+	} catch (error) {
+		console.error('Failed to save graph configurations:', error);
+	}
+}
+
+function loadGraphConfigurations() {
+	try {
+		const stored = localStorage.getItem(STORAGE_KEY);
+		if (!stored) return;
+
+		const configs = JSON.parse(stored);
+		if (!Array.isArray(configs)) return;
+
+		// Clear existing graphs
+		graphs.forEach(graph => {
+			if (graph.chart) {
+				graph.chart.destroy();
+			}
+		});
+		graphs = [];
+
+		// Restore graphs from configurations
+		configs.forEach(item => {
+			const graph = {
+				id: item.id,
+				config: item.config,
+				chart: null
+			};
+			graphs.push(graph);
+			
+			// Update nextGraphId to avoid conflicts
+			if (item.id >= nextGraphId) {
+				nextGraphId = item.id + 1;
+			}
+		});
+
+		// Render all graphs
+		if (graphs.length > 0) {
+			renderAllGraphs();
+		}
+
+		console.log(`Loaded ${graphs.length} graph configurations from localStorage`);
+	} catch (error) {
+		console.error('Failed to load graph configurations:', error);
+	}
 }
 
 // ==================== Graph Management ====================
@@ -233,6 +292,9 @@ function saveGraph() {
 		renderGraphCard(graph);
 	}
 
+	// Save configurations to localStorage
+	saveGraphConfigurations();
+
 	closeModal();
 	updateStats();
 }
@@ -256,6 +318,9 @@ function deleteGraph(graphId) {
 		// Remove from array
 		graphs.splice(index, 1);
 
+		// Save configurations to localStorage
+		saveGraphConfigurations();
+
 		updateStats();
 		checkEmptyState();
 	}
@@ -273,6 +338,10 @@ function clearAllGraphs() {
 	});
 
 	graphs = [];
+	
+	// Save configurations to localStorage
+	saveGraphConfigurations();
+	
 	renderAllGraphs();
 	updateStats();
 }
@@ -660,5 +729,8 @@ graphModal.addEventListener("click", (e) => {
 });
 
 // ==================== Initialize ====================
+// Load saved graph configurations from localStorage
+loadGraphConfigurations();
+
 connect();
 checkEmptyState();
