@@ -28,7 +28,7 @@ let nextGraphId = 1;
 let editingGraphId = null;
 
 // LocalStorage key for graph configurations
-const STORAGE_KEY = 'nasa-sniffer-graphs-config';
+const STORAGE_KEY = "nasa-sniffer-graphs-config";
 
 // DOM elements
 const statusDot = document.getElementById("statusDot");
@@ -128,14 +128,14 @@ function updateStats() {
 // ==================== LocalStorage Management ====================
 function saveGraphConfigurations() {
 	try {
-		const configs = graphs.map(graph => ({
+		const configs = graphs.map((graph) => ({
 			id: graph.id,
-			config: graph.config
+			config: graph.config,
 		}));
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(configs));
-		console.log('Graph configurations saved to localStorage');
+		console.log("Graph configurations saved to localStorage");
 	} catch (error) {
-		console.error('Failed to save graph configurations:', error);
+		console.error("Failed to save graph configurations:", error);
 	}
 }
 
@@ -148,7 +148,7 @@ function loadGraphConfigurations() {
 		if (!Array.isArray(configs)) return;
 
 		// Clear existing graphs
-		graphs.forEach(graph => {
+		graphs.forEach((graph) => {
 			if (graph.chart) {
 				graph.chart.destroy();
 			}
@@ -156,14 +156,14 @@ function loadGraphConfigurations() {
 		graphs = [];
 
 		// Restore graphs from configurations
-		configs.forEach(item => {
+		configs.forEach((item) => {
 			const graph = {
 				id: item.id,
 				config: item.config,
-				chart: null
+				chart: null,
 			};
 			graphs.push(graph);
-			
+
 			// Update nextGraphId to avoid conflicts
 			if (item.id >= nextGraphId) {
 				nextGraphId = item.id + 1;
@@ -177,7 +177,7 @@ function loadGraphConfigurations() {
 
 		console.log(`Loaded ${graphs.length} graph configurations from localStorage`);
 	} catch (error) {
-		console.error('Failed to load graph configurations:', error);
+		console.error("Failed to load graph configurations:", error);
 	}
 }
 
@@ -338,10 +338,10 @@ function clearAllGraphs() {
 	});
 
 	graphs = [];
-	
+
 	// Save configurations to localStorage
 	saveGraphConfigurations();
-	
+
 	renderAllGraphs();
 	updateStats();
 }
