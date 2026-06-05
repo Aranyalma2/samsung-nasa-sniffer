@@ -72,7 +72,7 @@ Load and view previously exported packets without connecting to any interface:
 ```bash
 node index.js --view <packet-file.json>
 # or
-npm run gui -- --view nasa_logs/nasa_packets_2025-11-14.json
+npm run gui --view nasa_logs/nasa_packets_2025-11-14.json
 ```
 
 View mode features:
